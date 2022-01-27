@@ -91,7 +91,7 @@ if __name__ == '__main__':
 
         # Remove EOG (blink) artifacts
         if remove_blinks:
-            info('Finding and removing occular artifacts', marker='=')
+            info('Finding and removing ocular artifacts', marker='=')
             eog_projs, eog_events = mne.preprocessing.compute_proj_eog(
                 raw, ch_name='MEG1411', reject=reject, flat=flat, n_jobs=n_jobs  # Channel 1411 is good for eye blink detection
             )
