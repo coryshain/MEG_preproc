@@ -1,0 +1,24 @@
+## DATA CLEANING
+
+# Number of principal components to use for artifact removal
+artifact_n_component: 1
+
+# Whether to remove cardiac artifacts
+remove_heartbeats: False
+
+# Whether to remove ocular artifacts
+remove_blinks: True
+
+# Lower bound for bandpassing
+low_freq: 0.1
+
+# Upper bound for bandpassing
+high_freq: 35
+
+# Signal rejection criteria
+reject:
+  mag: 8000e-15
+  grad: 8000e-13
+flat:
+  mag: 1e-15
+  grad: 1e-13
