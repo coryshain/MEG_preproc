@@ -1,0 +1,10 @@
+name: meg
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - cupy
+  - mne
+  - pip
+  - pyyaml
+
