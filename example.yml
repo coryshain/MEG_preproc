@@ -1,0 +1,37 @@
+## DATA SOURCE
+
+subjects:
+  - PATHS
+  - TO
+  - SUBJECT
+  - DIRS
+
+
+
+## DATA CLEANING
+
+# Whether to remove cardiac artifacts
+remove_heartbeats: True
+
+# Whether to remove ocular artifacts
+remove_blinks: True
+
+# Lower bound for bandpassing
+low_freq: 0.1
+
+# Upper bound for bandpassing
+high_freq: 35
+
+
+
+## EVENT EXTRACTION
+
+end_code: INTEGER CODE SIGNALING END OF ITEM, OR NULL TO USE EPOCHING
+event_map:
+  1: MAP
+  2: FROM
+  3: CODES
+  4: TO
+  5: HUMAN
+  6: READABLE
+  7: LABELS
