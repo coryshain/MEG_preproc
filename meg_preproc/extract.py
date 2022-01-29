@@ -1,5 +1,5 @@
-import sys
 import os
+import time
 import numpy as np
 import pandas as pd
 import mne
@@ -17,9 +17,7 @@ if __name__ == '__main__':
     Extract tabular event-related representation of cleaned MEG timecourses
     ''')
     argparser.add_argument('config', help='Path to config file containing extraction instructions.')
-    argparser.add_argument('-r', '--resample_to', default=None, help='Target resolution (in Hz) of temporal resampling. If unspecified, no resampling.')
     argparser.add_argument('-j', '--n_jobs', default='cuda', help='Number of jobs for parallel processing, or "cuda" to attempt GPU acceleration if available.')
-    argparser.add_argument('-c', '--clean_code', default='cob', help='Code indicating which cleaning steps to search for ("c?o?b?", where "c" indicates cardiac artifact removal, "o" indicates ocular artifact removal, and "b" indicates bandpass filtering).')
     argparser.add_argument('-d', '--debug', action='store_true', help='Run in debug mode on a subset of data for speed, saving plots but not data.')
     args = argparser.parse_args()
 
@@ -27,7 +25,6 @@ if __name__ == '__main__':
     # Parse config
     debug = args.debug
     n_jobs = args.n_jobs
-    clean_code = args.clean_code
     if n_jobs.lower() == 'cuda':
         try:
             import cupy as cp
@@ -48,7 +45,9 @@ if __name__ == '__main__':
     with open(config_path, 'r') as f:
         config = yaml.load(f, Loader=Loader)
     subjects = config['subjects']
-    resample_to = args.resample_to
+    outdir = config.get('outdir', './')
+    clean_code = config.get('clean_code', 'default_meg')
+    resample_to = config.get('resample_to', None)
     event_code_to_name = config.get('event_map', None)
     if event_code_to_name is None:
         use_default_event_map = True
@@ -80,14 +79,15 @@ if __name__ == '__main__':
     flat = dict(mag=1e-15, grad=1e-13)  # T/m
 
     # Container for output DataFrame
-    df = []
+    responses = []
+    events = []
 
     for subject_dir in subjects:
         subject_dir = os.path.normpath(subject_dir)
 
         # Load data
         info('Processing subject directory: %s' % subject_dir, marker='*')
-        fifs = [x for x in os.listdir(subject_dir) if x.endswith('%s_cleaned_meg.fif' % clean_code)]
+        fifs = [x for x in os.listdir(subject_dir) if x.endswith('%s.fif' % clean_code)]
         if not fifs:
             stderr('No *_cleaned_meg.fif files found in directory %s. Skipping...\n' % subject_dir)
             continue
@@ -103,11 +103,10 @@ if __name__ == '__main__':
             raw = mne.io.Raw(fif_base)
 
         # Load events
-        events = mne.find_events(raw, stim_channel='STI101', min_duration=0.002)
+        all_events = mne.find_events(raw, stim_channel='STI101', min_duration=0.002)
         sfreq = raw.info['sfreq']
         time_scale = 1. / sfreq
-        event_times = events[:, 0] * time_scale
-        event_ids = events[:, 2]
+        event_ids = all_events[:, 2]
         if use_default_event_map:
             for x in np.unique(event_ids):  # 3rd column contains event ids
                 if x not in event_code_to_name:
@@ -115,10 +114,12 @@ if __name__ == '__main__':
                 if str(x) not in event_name_to_code:
                     event_name_to_code[str(x)] = x
 
+        event_mapper = np.vectorize(lambda x: event_code_to_name[x])
+
         if epoch_data:
             data = mne.Epochs(
                 raw,
-                events=events,
+                events=all_events,
                 event_id=event_name_to_code,
                 tmin=epoch_tmin,
                 tmax=epoch_tmax,
@@ -131,9 +132,21 @@ if __name__ == '__main__':
                 info('Resampling to %s Hz' % resample_to)
                 data.resample(resample_to, n_jobs=n_jobs)
 
-            _df = data.to_data_frame(picks='meg', time_format=None)
-            _df['subject'] = os.path.basename(subject_dir)
-            df.append(_df)
+            _responses = data.to_data_frame(picks='meg')
+            _responses['subject'] = os.path.basename(subject_dir)
+            responses.append(_responses)
+
+            _events = data.events
+            _event_ids = _events[:,2]
+            _event_names = event_mapper(_event_ids)
+            _event_times = _events[:,0] * time_scale
+            _events = pd.DataFrame({
+                'subject': os.path.basename(subject_dir),
+                'epoch': np.arange(len(_event_names)),
+                'condition': _event_names,
+                'onset_time': _event_times
+            })
+            events.append(_events)
 
         else:
             data = raw
@@ -146,7 +159,9 @@ if __name__ == '__main__':
             _event_start = None
             _event_end = None
             epoch_ix = 0
-            for t, _, code in events:
+            if resample_to:
+                data.load_data()
+            for t, _, code in all_events:
                 if seek_start:
                     if code in event_code_to_name:
                         seek_start = False
@@ -164,13 +179,21 @@ if __name__ == '__main__':
 
                         if resample_to:
                             stderr('Resampling...\n')
-                            _data = _data.resample(resample_to, n_jobs=n_jobs, )
+                            _data = _data.resample(resample_to, n_jobs=n_jobs)
 
-                        _df = _data.to_data_frame(picks='meg', time_format=None)
-                        _df['subject'] = os.path.basename(subject_dir)
-                        _df['epoch'] = epoch_ix
-                        _df['condition'] = event_code_to_name[_event_code]
-                        df.append(_df)
+                        _responses = _data.to_data_frame(picks='meg')
+                        _responses['subject'] = os.path.basename(subject_dir)
+                        _responses['epoch'] = epoch_ix
+                        _responses['condition'] = event_code_to_name[_event_code]
+                        responses.append(_responses)
+
+                        _events = pd.DataFrame({
+                            'subject': os.path.basename(subject_dir),
+                            'epoch': epoch_ix,
+                            'condition': event_code_to_name[_event_code],
+                            'onset_time': _event_start
+                        })
+                        events.append(_events)
 
                         seek_start = True
                         _event_code = None
@@ -178,7 +201,32 @@ if __name__ == '__main__':
                         _event_end = None
                         epoch_ix += 1
 
-    if df:
-        df = pd.concat(df, axis=0)
+    exit()
+
+    if responses:
+        info('Saving response table')
+        responses = pd.concat(responses, axis=0)
+        responses['time'] = responses['time'] * time_scale
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
+        responses.to_csv(
+            os.path.join(outdir, os.path.basename(config_path[:-4]) + '_responses.csv'),
+            index=False
+        )
     else:
-        info('No output data. Terminating.')
+        info('No output response data.')
+
+    if events:
+        info('Saving response table')
+        events = pd.concat(events, axis=0)
+        events['time'] = events['time'] * time_scale
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
+        events.to_csv(
+            os.path.join(outdir, os.path.basename(config_path[:-4]) + '_events.csv'),
+            index=False
+        )
+    else:
+        info('No output event data.')
+
+    info('End')

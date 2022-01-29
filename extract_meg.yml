@@ -1,5 +1,13 @@
 ## EVENT EXTRACTION
-
+subjects:
+  - LIST
+  - OF
+  - PATHS
+  - TO
+  - SUBJECT
+  - DIRS
+outdir: timecourses
+resample_to: FLOAT FREQ TO RESAMPLE TO
 end_code: INTEGER CODE SIGNALING END OF ITEM, OR NULL TO USE EPOCHING
 event_map:
   1: MAP

@@ -5,6 +5,7 @@ channels:
 dependencies:
   - cupy
   - mne
+  - pandas
   - pip
   - pyyaml
 

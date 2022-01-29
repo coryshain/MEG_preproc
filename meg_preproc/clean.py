@@ -82,8 +82,6 @@ if __name__ == '__main__':
         with open(os.path.join(subject_dir, config_name + '.yml'), 'w') as f:
             yaml.dump(config, f, Dumper=Dumper)
 
-        suffix = ''
-
         # Load data
         info('Processing subject directory: %s' % subject_dir, marker='*')
         fifs = [x[:-4] for x in os.listdir(subject_dir) if x.endswith('.fif')]
@@ -99,9 +97,6 @@ if __name__ == '__main__':
             raw = mne.io.Raw(fif_base).crop(tmax=1000)
         else:
             raw = mne.io.Raw(fif_base)
-
-        # Load events
-        events = mne.find_events(raw, stim_channel='STI101', min_duration=0.002)
 
         # Remove ECG (heartbeat) artifacts
         ecg_projs = None
@@ -138,19 +133,20 @@ if __name__ == '__main__':
             raw.load_data()
             raw.filter(l_freq=low_freq, h_freq=high_freq, picks='meg', n_jobs=n_jobs)
 
-        if suffix:
-            suffix = '_' + suffix
-        suffix += '_' + config_name
+        # Add the config protocol name to the output path
+        suffix = '_' + config_name
 
-        print(raw)
-        print(dir(raw))
-        fig = raw.plot_projs_topomap(show=False)
-        eog_fig_path = os.path.join(subject_dir, prefix + suffix + '_proj' + '.png')
-        fig.savefig(eog_fig_path)
-        plt.close('all')
+        # Plot artifact filter topographies if applicable
+        if raw.proj:
+            fig = raw.plot_projs_topomap(show=False)
+            eog_fig_path = os.path.join(subject_dir, prefix + suffix + '_proj' + '.png')
+            fig.savefig(eog_fig_path)
+            plt.close('all')
 
-        raw.apply_proj()
+            # Apply projection(s) to fix artifacts
+            raw.apply_proj()
 
+        # Save cleaned data
         suffix += '.fif'
         raw.save(os.path.join(subject_dir, prefix + suffix), overwrite=True)
 
