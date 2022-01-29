@@ -188,10 +188,10 @@ if __name__ == '__main__':
                         responses.append(_responses)
 
                         _events = pd.DataFrame({
-                            'subject': os.path.basename(subject_dir),
-                            'epoch': epoch_ix,
-                            'condition': event_code_to_name[_event_code],
-                            'onset_time': _event_start
+                            'subject': [os.path.basename(subject_dir)],
+                            'epoch': [epoch_ix],
+                            'condition': [event_code_to_name[_event_code]],
+                            'onset_time': [_event_start]
                         })
                         events.append(_events)
 
