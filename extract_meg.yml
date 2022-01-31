@@ -1,19 +1,60 @@
-## EVENT EXTRACTION
+# EVENT EXTRACTION
+#
+# Instructions for extracting event-related MEG data for regression.
+# Whether fields are required or optional is noted in comments.
+# Optional fields can be omitted by deleting them.
+
+
+# Name of experiment; must match name in protocol.txt file.
+# REQUIRED
+expt_name: <Name>
+
+# List of paths to subject directories.
+# REQUIRED
 subjects:
-  - LIST
-  - OF
-  - PATHS
-  - TO
-  - SUBJECT
-  - DIRS
-outdir: timecourses
-resample_to: FLOAT FREQ TO RESAMPLE TO
-end_code: INTEGER CODE SIGNALING END OF ITEM, OR NULL TO USE EPOCHING
+  - <Path1>
+  - <Path2>
+  - <Etc...>
+
+# Path to output directory.
+# OPTIONAL: defaults to ./
+outdir: ./
+
+# Name of cleaning protocol to search for; i.e., <Name> from the <Name>.yml
+# config file used to clean the data.
+# OPTIONAL: defaults to default_meg
+clean_code: default_meg
+
+# Frequency to which to resample data (e.g. 100 for 100Hz).
+# OPTIONAL: defaults to Null, for no resampling
+resample_to: Null
+
+# Integer code to signal end of item.
+# OPTIONAL: defaults to Null, for epoching
+end_code: Null
+
+# Map from integer acquisition event codes to human-readable labels for
+# events.
+# OPTIONAL: defaults to Null, for using the event code as the label
 event_map:
-  1: MAP
-  2: FROM
-  3: CODES
-  4: TO
-  5: HUMAN
-  6: READABLE
-  7: LABELS
+  1: <Label1>
+  2: <Label2>
+  3: <Etc...>
+
+# Minimum relative time for defining epochs (if epoching) or preceding
+# window before entire items (if not epoching).
+# OPTIONAL: defaults to -0.2, for 200ms before onset
+epoch_tmin: -0.2
+
+# Maximum relative time for defining epochs (if epoching) or following
+# window after entire items (if not epoching).
+# OPTIONAL: defaults to 0.8, for 800ms after onset (if epoching) or 800ms after item end
+epoch_tmax: 0.8
+
+# Path to CSV file containing word-level data, for experiments coded
+# as multi-word events (e.g. one event code for the onset of an entire
+# passage). Must at minimum contain columns "condition" (mapping word
+# sequences to labels from *event_map*) and "word_onset_time", containing
+# the word's onset time relative to the onset of the item.
+# OPTIONAL: defaults to Null, for no word-level stimulus data.
+word_level_file: <Path>

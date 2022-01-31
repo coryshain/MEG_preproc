@@ -1,4 +1,8 @@
-## DATA CLEANING
+# DATA CLEANING
+#
+# Instructions for cleaning MEG data.
+# All fields optional (if unspecified, defaults will be pulled from
+# meg_preproc/templates/cleaning_defaults.yml).
 
 # Number of principal components to use for artifact removal
 artifact_n_component: 1
