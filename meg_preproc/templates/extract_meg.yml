@@ -20,6 +20,15 @@ subjects:
 # OPTIONAL: defaults to ./
 outdir: ./
 
+# Type of sensor representation to return. One of all (for
+# all input sensors), mag (for magnetometers), grad (for
+# gradiometers), or gradnorm (for the norm of each gradiometer
+# pair at each location). The suffix '+' can be added to
+# any of these in order to include gradnorms in addition.
+# E.g. "all+" means all sensors and also gradnorms.
+# OPTIONAL: defaults to all
+sensor_type: all
+
 # Name of cleaning protocol to search for; i.e., <Name> from the <Name>.yml
 # config file used to clean the data.
 # OPTIONAL: defaults to default_meg
@@ -34,21 +43,24 @@ resample_to: Null
 end_code: Null
 
 # Map from integer acquisition event codes to human-readable labels for
-# events.
-# OPTIONAL: defaults to Null, for using the event code as the label
-event_map:
-  1: <Label1>
-  2: <Label2>
-  3: <Etc...>
+# events. For example:
+#
+# event_map:
+#   1: condA
+#   2: condB
+#   255: Fixation
+#
+# OPTIONAL: defaults to Null, which uses the event code as the label
+event_map: Null
 
 # Minimum relative time for defining epochs (if epoching) or preceding
 # window before entire items (if not epoching).
-# OPTIONAL: defaults to -0.2, for 200ms before onset
+# OPTIONAL: defaults to -0.2, i.e. 200ms before onset
 epoch_tmin: -0.2
 
 # Maximum relative time for defining epochs (if epoching) or following
 # window after entire items (if not epoching).
-# OPTIONAL: defaults to 0.8, for 800ms after onset (if epoching) or 800ms after item end
+# OPTIONAL: defaults to 0.8, i.e. 800ms after onset (if epoching) or 800ms after item end
 epoch_tmax: 0.8
 
 # Path to CSV file containing word-level data, for experiments coded
@@ -57,4 +69,4 @@ epoch_tmax: 0.8
 # sequences to labels from *event_map*) and "word_onset_time", containing
 # the word's onset time relative to the onset of the item.
 # OPTIONAL: defaults to Null, for no word-level stimulus data.
-word_level_file: <Path>
+word_level_file: Null

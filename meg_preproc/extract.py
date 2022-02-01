@@ -50,6 +50,7 @@ if __name__ == '__main__':
     expt_name = config['expt_name']
     subjects = config['subjects']
     outdir = config.get('outdir', './')
+    sensor_type = config.get('sensor_type', 'all')
     clean_code = config.get('clean_code', 'default_meg')
     resample_to = config.get('resample_to', None)
     event_code_to_name = config.get('event_map', None)
@@ -247,6 +248,31 @@ if __name__ == '__main__':
         responses['time'] = responses['time'] * time_scale
         if not os.path.exists(outdir):
             os.makedirs(outdir)
+
+        grad_norms = {}
+        if sensor_type[-1] == '+' or sensor_type.lower() == 'gradnorm':
+            # Compute gradnorms
+            grad_norms = {}
+            sensor_locations = sorted(list(set([c[:-1] for c in responses.columns if c.startswith('MEG')])))
+            for c in sensor_locations:
+                g1 = responses[c + '2']
+                g2 = responses[c + '3']
+                n = np.sqrt(g1 ** 2 + g2 ** 2)
+                grad_norms[c.replace('MEG', 'MEGGN')] = n
+        if sensor_type.lower() == 'mag':
+            # Delete gradiometers (sensor names that don't end in 1)
+            for c in responses.columns:
+                if c.startswith('MEG') and not c.endswith('1'):
+                    del responses[c]
+        elif sensor_type.lower() == 'grad':
+            # Delete magentometers (sensor names that end in 1)
+            for c in responses.columns:
+                if c.startswith('MEG') and c.endswith('1'):
+                    del responses[c]
+        if grad_norms:
+            grad_norms = pd.DataFrame(grad_norms)
+            responses = pd.concat([responses, grad_norms], axis=1)
+
         responses.to_csv(
             os.path.join(outdir, os.path.basename(expt_name) + '_responses.csv'),
             index=False
