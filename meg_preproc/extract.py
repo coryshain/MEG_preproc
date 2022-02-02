@@ -81,7 +81,7 @@ if __name__ == '__main__':
         epoch_data = True
     word_level_file = config.get('word_level_file', None)
     if word_level_file:
-        word_level_events = pd.read_csv('word_level_file')
+        word_level_events = pd.read_csv(word_level_file)
         assert 'condition' in word_level_events and 'word_onset_time' in word_level_events, (
                 'File %s was provided via field ``word_level_file``, but it is not correctly formatted.'
                 ' It must contain columns called "condition" and "word_onset_time" to enable alignment'
@@ -151,13 +151,40 @@ if __name__ == '__main__':
                 if str(x) not in event_name_to_code:
                     event_name_to_code[str(x)] = x
 
-        event_mapper = np.vectorize(lambda x: event_code_to_name[x])
+        event_mapper = np.vectorize(lambda x: event_code_to_name.get(x, str(x)))
 
         if epoch_data:
+            if word_level_events is None:
+                epoch_events = all_events
+                event_id = event_name_to_code
+            else:
+                epoch_events_src = pd.DataFrame(all_events, columns=['time', 'something', 'condition'])
+                epoch_events_src['onset_time'] = epoch_events_src['time']
+                epoch_events_src = epoch_events_src[epoch_events_src.condition.isin(event_code_to_name)]
+                epoch_events_src.condition = event_mapper(epoch_events_src.condition)
+                epoch_events_src = pd.merge(
+                    epoch_events_src, word_level_events.reset_index(),
+                    on='condition',
+                    how='inner'
+                )
+                _event_times = epoch_events_src['word_onset_time'] / time_scale + epoch_events_src['time']
+                _event_other = epoch_events_src[['something', 'index']].values
+                sel = np.logical_and(_event_times * time_scale >= expt_start, _event_times * time_scale <=  expt_end)
+                _event_times = _event_times[sel]
+                _event_other = _event_other[sel]
+                epoch_events_src = epoch_events_src[sel]
+                epoch_events = np.concatenate(
+                    [_event_times[..., None], _event_other],
+                    axis=1
+                ).astype(int)
+                del epoch_events_src['time']
+                del epoch_events_src['something']
+                event_id = None
+
             data = mne.Epochs(
                 raw,
-                events=all_events,
-                event_id=event_name_to_code,
+                events=epoch_events,
+                event_id=event_id,
                 tmin=epoch_tmin,
                 tmax=epoch_tmax,
                 reject=reject,
@@ -169,21 +196,27 @@ if __name__ == '__main__':
                 info('Resampling to %s Hz' % resample_to)
                 data.resample(resample_to, n_jobs=n_jobs)
 
+            _events = data.events
+            _event_ids = _events[:, 2]
+            if word_level_events is None:
+                _event_names = event_mapper(_event_ids)
+                _event_times = _events[:,0] * time_scale
+                _events = pd.DataFrame({
+                    'epoch': np.arange(len(_event_names)),
+                    'condition': _event_names,
+                    'onset_time': _event_times
+                })
+            else:
+                _events = pd.DataFrame({'index': _event_ids})
+                _events = pd.merge(_events, epoch_events_src[['index', 'condition', 'onset_time']], on='index')
+                _events['epoch'] = np.arange(len(_events))
+                del _events['index']
+            _events['subject'] = os.path.basename(subject_dir)
+            events.append(_events)
+
             _responses = data.to_data_frame(picks='meg')
             _responses['subject'] = os.path.basename(subject_dir)
             responses.append(_responses)
-
-            _events = data.events
-            _event_ids = _events[:,2]
-            _event_names = event_mapper(_event_ids)
-            _event_times = _events[:,0] * time_scale
-            _events = pd.DataFrame({
-                'subject': os.path.basename(subject_dir),
-                'epoch': np.arange(len(_event_names)),
-                'condition': _event_names,
-                'onset_time': _event_times
-            })
-            events.append(_events)
 
         else:
             data = raw
@@ -241,6 +274,34 @@ if __name__ == '__main__':
                         _event_end = None
                         epoch_ix += 1
 
+    if events:
+        info('Saving event table')
+        events = pd.concat(events, axis=0).reset_index(drop=True)
+        events['onset_time'] = events['onset_time'] * time_scale
+        if 'offset_time' in events:
+            events['offset_time'] = events['offset_time'] * time_scale
+            events['duration'] = events['offset_time'] - events['onset_time']
+        if word_level_events is not None:
+            if epoch_data:
+                events['word_pos'] = events.groupby('condition').cumcount() + 1
+                on = ['condition', 'word_pos']
+            else:
+                on = ['condition']
+            events = pd.merge(events, word_level_events, on=on, how='left')
+            events.word_onset_time = events.word_onset_time + events.onset_time
+            if 'word_offset_time' in events:
+                events.word_offset_time = events.word_offset_time + events.onset_time
+                events.word_duration = events.word_offset_time - events.word_onset_time
+
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
+        events.to_csv(
+            os.path.join(outdir, os.path.basename(expt_name) + '_events.csv'),
+            index=False
+        )
+    else:
+        info('No output event data.')
+
     if responses:
         info('Saving response table')
         responses = pd.concat(responses, axis=0)
@@ -279,28 +340,5 @@ if __name__ == '__main__':
         )
     else:
         info('No output response data.')
-
-    if events:
-        info('Saving response table')
-        events = pd.concat(events, axis=0).reset_index(drop=True)
-        events['onset_time'] = events['onset_time'] * time_scale
-        if 'offset_time' in events:
-            events['offset_time'] = events['offset_time'] * time_scale
-            events['duration'] = events['offset_time'] - events['onset_time']
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
-        if word_level_events is not None:
-            events = pd.merge(events, word_level_events, on=['condition'])
-            events.word_onset_time = events.word_onset_time + events.onset_time
-            if 'word_offset_time' in events:
-                events.word_offset_time = events.word_offset_time + events.onset_time
-                events.word_duration = events.word_offset_time - events.word_onset_time
-
-        events.to_csv(
-            os.path.join(outdir, os.path.basename(expt_name) + '_events.csv'),
-            index=False
-        )
-    else:
-        info('No output event data.')
 
     info('End')
