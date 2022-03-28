@@ -216,6 +216,7 @@ if __name__ == '__main__':
 
             _responses = data.to_data_frame(picks='meg')
             _responses['subject'] = os.path.basename(subject_dir)
+            _responses['time'] = _responses['time']
             responses.append(_responses)
 
         else:
@@ -257,6 +258,7 @@ if __name__ == '__main__':
                         _responses['subject'] = os.path.basename(subject_dir)
                         _responses['epoch'] = epoch_ix
                         _responses['condition'] = event_code_to_name[_event_code]
+                        _responses['time'] = _responses['time'] * time_scale + start
                         responses.append(_responses)
 
                         _events = pd.DataFrame({
@@ -309,7 +311,6 @@ if __name__ == '__main__':
         info('Saving response table')
         responses = pd.concat(responses, axis=0)
         responses = responses.reset_index()
-        responses['time'] = responses['time'] * time_scale
         if not os.path.exists(outdir):
             os.makedirs(outdir)
 
