@@ -281,6 +281,9 @@ if __name__ == '__main__':
         if 'offset_time' in events:
             events['offset_time'] = events['offset_time'] * time_scale
             events['duration'] = events['offset_time'] - events['onset_time']
+        if 'time' in events and 'word_onset_time' in events: # time is assumed relative to item onset, make relative to scanning onset
+            events['time_rel'] = events['time']
+            events['time'] = events['time'] + events['word_onset_time']
         if word_level_events is not None:
             if epoch_data:
                 events['word_pos'] = events.groupby('condition').cumcount() + 1
