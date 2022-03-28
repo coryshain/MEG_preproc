@@ -181,11 +181,6 @@ if __name__ == '__main__':
                 del epoch_events_src['something']
                 event_id = None
 
-            print(epoch_events)
-            print(epoch_events.shape)
-            print(epoch_events_src)
-            print(epoch_events_src.shape)
-
             data = mne.Epochs(
                 raw,
                 events=epoch_events,
@@ -213,16 +208,11 @@ if __name__ == '__main__':
                 })
             else:
                 _events = pd.DataFrame({'index': _event_ids})
-                print(_events)
-                print(epoch_events_src[['index', 'condition', 'onset_time']])
                 _events = pd.merge(_events, epoch_events_src[['index', 'condition', 'onset_time']], on='index')
                 _events['epoch'] = np.arange(len(_events))
-                print(_events)
                 del _events['index']
             _events['subject'] = os.path.basename(subject_dir)
             events.append(_events)
-
-            print(events)
 
             _responses = data.to_data_frame(picks='meg')
             _responses['subject'] = os.path.basename(subject_dir)
@@ -291,6 +281,9 @@ if __name__ == '__main__':
         if 'offset_time' in events:
             events['offset_time'] = events['offset_time'] * time_scale
             events['duration'] = events['offset_time'] - events['onset_time']
+        if 'time' in events and 'word_onset_time' in events: # time is assumed relative to item onset, make relative to scanning onset
+            events['time_rel'] = events['time']
+            events['time'] = events['time'] + events['word_onset_time']
         if word_level_events is not None:
             if epoch_data:
                 events['word_pos'] = events.groupby('condition').cumcount() + 1
@@ -298,7 +291,6 @@ if __name__ == '__main__':
             else:
                 on = ['condition']
             events = pd.merge(events, word_level_events, on=on, how='left')
-            print(events)
             events.word_onset_time = events.word_onset_time + events.onset_time
             if 'word_offset_time' in events:
                 events.word_offset_time = events.word_offset_time + events.onset_time
