@@ -79,6 +79,9 @@ if __name__ == '__main__':
     flat = {x: float(flat[x]) for x in flat}
 
     for subject_dir in subject_dirs:
+        print(subject_dir)
+        print(config_name)
+        input()
         with open(os.path.join(subject_dir, config_name + '.yml'), 'w') as f:
             yaml.dump(config, f, Dumper=Dumper)
 
