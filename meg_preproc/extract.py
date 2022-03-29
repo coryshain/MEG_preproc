@@ -233,6 +233,8 @@ if __name__ == '__main__':
             if resample_to:
                 data.load_data()
             for t, _, code in all_events:
+                if t * time_scale < expt_start or t * time_scale > expt_end:
+                    continue
                 if seek_start:
                     if code in event_code_to_name:
                         seek_start = False
@@ -300,7 +302,7 @@ if __name__ == '__main__':
             events.word_onset_time = events.word_onset_time + events.onset_time
             if 'word_offset_time' in events:
                 events.word_offset_time = events.word_offset_time + events.onset_time
-                events.word_duration = events.word_offset_time - events.word_onset_time
+                events['word_duration'] = events.word_offset_time - events.word_onset_time
         if 'time' in events: # time is assumed relative to item onset, make relative to scanning onset
             events['time_rel'] = events['time']
             events['time'] = events['time'] + events['onset_time']
