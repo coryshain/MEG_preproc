@@ -292,12 +292,12 @@ if __name__ == '__main__':
                 on = ['condition']
             events = pd.merge(events, word_level_events, on=on, how='left')
             events.word_onset_time = events.word_onset_time + events.onset_time
-            if 'time' in events and 'word_onset_time' in events: # time is assumed relative to item onset, make relative to scanning onset
-                events['time_rel'] = events['time']
-                events['time'] = events['time'] + events['word_onset_time']
             if 'word_offset_time' in events:
                 events.word_offset_time = events.word_offset_time + events.onset_time
                 events.word_duration = events.word_offset_time - events.word_onset_time
+        if 'time' in events and 'word_onset_time' in events: # time is assumed relative to item onset, make relative to scanning onset
+            events['time_rel'] = events['time']
+            events['time'] = events['time'] + events['onset_time']
 
         if not os.path.exists(outdir):
             os.makedirs(outdir)
@@ -311,7 +311,7 @@ if __name__ == '__main__':
     if responses:
         info('Saving response table')
         responses = pd.concat(responses, axis=0)
-        responses = responses.reset_index()
+        responses = responses.reset_index(drop=True)
         if not os.path.exists(outdir):
             os.makedirs(outdir)
 
