@@ -245,7 +245,7 @@ if __name__ == '__main__':
 
                         _event_end = t
 
-                        start = min(_event_start * time_scale + epoch_tmin, data.times.max())
+                        start = max(min(_event_start * time_scale + epoch_tmin, data.times.max()), 0)
                         end = min(_event_end * time_scale + epoch_tmax, data.times.max())
 
                         _data = data.copy().crop(start, end)
@@ -271,6 +271,12 @@ if __name__ == '__main__':
                         })
                         events.append(_events)
 
+                        print(start)
+                        print(end)
+                        print(_events[['subject', 'epoch', 'condition', 'onset_time']])
+                        print(_responses[['subject', 'epoch', 'condition', 'time']])
+                        input()
+
                         seek_start = True
                         _event_code = None
                         _event_start = None
@@ -295,7 +301,7 @@ if __name__ == '__main__':
             if 'word_offset_time' in events:
                 events.word_offset_time = events.word_offset_time + events.onset_time
                 events.word_duration = events.word_offset_time - events.word_onset_time
-        if 'time' in events and 'word_onset_time' in events: # time is assumed relative to item onset, make relative to scanning onset
+        if 'time' in events: # time is assumed relative to item onset, make relative to scanning onset
             events['time_rel'] = events['time']
             events['time'] = events['time'] + events['onset_time']
 
