@@ -275,7 +275,7 @@ if __name__ == '__main__':
                         print(end)
                         print(_events[['subject', 'epoch', 'condition', 'onset_time']])
                         print(_responses[['subject', 'epoch', 'condition', 'time']])
-                        input()
+                        print()
 
                         seek_start = True
                         _event_code = None
