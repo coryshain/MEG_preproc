@@ -141,7 +141,7 @@ if __name__ == '__main__':
         max_time = raw.times.max()
 
         # Load events
-        all_events = mne.find_events(raw, stim_channel='STI101', min_duration=0.002)
+        all_events = mne.find_events(raw, stim_channel='STI101', min_duration=0.002, consecutive=True)
         sfreq = raw.info['sfreq']
         time_scale = 1. / sfreq
         all_events[:,0] = all_events[:,0] - raw.first_samp
