@@ -144,7 +144,7 @@ if __name__ == '__main__':
         all_events = mne.find_events(raw, stim_channel='STI101', min_duration=0.002)
         sfreq = raw.info['sfreq']
         time_scale = 1. / sfreq
-        all_events[:,0] = all_events[:,0] - round(expt_start * sfreq)
+        all_events[:,0] = all_events[:,0] - raw.first_samp
         event_ids = all_events[:, 2]
         if use_default_event_map:
             for x in np.unique(event_ids):  # 3rd column contains event ids
@@ -263,7 +263,7 @@ if __name__ == '__main__':
                         _responses['epoch'] = epoch_ix
                         _responses['condition'] = event_code_to_name[_event_code]
                         _responses = _responses.reset_index()
-                        _responses['time'] = _responses['time'] * time_scale + start
+                        _responses['time'] = (_responses['time'] + _data.first_samp) * time_scale
                         responses.append(_responses)
 
                         _events = pd.DataFrame({
