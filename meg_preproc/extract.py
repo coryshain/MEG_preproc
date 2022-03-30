@@ -263,7 +263,7 @@ if __name__ == '__main__':
                         _responses['epoch'] = epoch_ix
                         _responses['condition'] = event_code_to_name[_event_code]
                         _responses = _responses.reset_index()
-                        _responses['time'] = (_responses['time'] + _data.first_samp) * time_scale
+                        _responses['time'] = _responses['time'] * time_scale + start
                         responses.append(_responses)
 
                         _events = pd.DataFrame({
