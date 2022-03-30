@@ -138,11 +138,13 @@ if __name__ == '__main__':
         if debug:
             expt_end = min(expt_end, expt_start + 1000)
         raw.crop(tmin=expt_start, tmax=expt_end)
+        max_time = raw.times.max()
 
         # Load events
         all_events = mne.find_events(raw, stim_channel='STI101', min_duration=0.002)
         sfreq = raw.info['sfreq']
         time_scale = 1. / sfreq
+        all_events[:,0] = all_events[:,0] - round(expt_start * sfreq)
         event_ids = all_events[:, 2]
         if use_default_event_map:
             for x in np.unique(event_ids):  # 3rd column contains event ids
@@ -169,7 +171,7 @@ if __name__ == '__main__':
                 )
                 _event_times = epoch_events_src['word_onset_time'] / time_scale + epoch_events_src['time']
                 _event_other = epoch_events_src[['something', 'index']].values
-                sel = np.logical_and(_event_times * time_scale >= expt_start, _event_times * time_scale <=  expt_end)
+                sel = np.logical_and(_event_times > 0, _event_times * time_scale <= max_time)
                 _event_times = _event_times[sel]
                 _event_other = _event_other[sel]
                 epoch_events_src = epoch_events_src[sel]
@@ -233,7 +235,7 @@ if __name__ == '__main__':
             if resample_to:
                 data.load_data()
             for t, _, code in all_events:
-                if t * time_scale < expt_start or t * time_scale > expt_end:
+                if t < 0 or t * time_scale > max_time:
                     continue
                 if seek_start:
                     if code in event_code_to_name:
