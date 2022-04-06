@@ -186,11 +186,11 @@ if __name__ == '__main__':
         sel = mne.pick_types(data.info, meg=True)
         channel_names = [data.info['ch_names'][x] for x in sel]
         subject_name = os.path.basename(subject_dir)
-        outpath = outdir + '/' + subject_name
+        outpath = outdir + '/' + subject_name + '/' + data_name
         if not os.path.exists(outpath):
             os.makedirs(outpath)
         for i, channel_name in enumerate(channel_names):
-            info('Saving %s %s %s...' % (subject_name, channel_name, data_name))
+            stderr('Saving %s %s %s...\n' % (subject_name, channel_name, data_name))
             _raster_data = out[:,i,:]
             savemat(
                 outpath + '/%s_%s_%s.mat' % (subject_name, channel_name, data_name),
