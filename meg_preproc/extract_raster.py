@@ -190,6 +190,7 @@ if __name__ == '__main__':
         if not os.path.exists(outpath):
             os.makedirs(outpath)
         for i, channel_name in enumerate(channel_names):
+            info('Saving %s %s %s...' % (subject_name, channel_name, data_name))
             _raster_data = out[:,i,:]
             savemat(
                 outpath + '/%s_%s_%s.mat' % (subject_name, channel_name, data_name),
