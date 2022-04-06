@@ -185,6 +185,7 @@ if __name__ == '__main__':
             val = data.info[k]
             if k == 'meas_date':
                 val = str(val)
+            print(k)
             raster_site_info[k] = val
         sel = mne.pick_types(data.info, meg=True)
         channel_names = [data.info['ch_names'][x] for x in sel]
