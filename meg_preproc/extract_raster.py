@@ -182,7 +182,10 @@ if __name__ == '__main__':
         info_keys = ['acq_pars', 'bads', 'ch_names', 'chs', 'description', 'dig', 'line_freq', 'meas_date', 'meas_id',
                      'nchan', 'sfreq']
         for k in info_keys:
-            raster_site_info[k] = data.info[k]
+            val = data.info[k]
+            if k == 'meas_date':
+                val = str(val)
+            raster_site_info[k] = val
         sel = mne.pick_types(data.info, meg=True)
         channel_names = [data.info['ch_names'][x] for x in sel]
         subject_name = os.path.basename(subject_dir)
