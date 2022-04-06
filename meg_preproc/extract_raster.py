@@ -191,7 +191,7 @@ if __name__ == '__main__':
         for i, channel_name in enumerate(channel_names):
             _raster_data = out[:,i,:]
             savemat(
-                outpath + '%s_%s.mat' % (subject_name, channel_name),
+                outpath + '/%s_%s.mat' % (subject_name, channel_name),
                 {
                     'raster_data': _raster_data,
                     'raster_labels': fromarrays([raster_labels], names=['attr_cat']),
