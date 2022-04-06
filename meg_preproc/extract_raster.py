@@ -183,7 +183,7 @@ if __name__ == '__main__':
         for k in info_keys:
             raster_site_info[k] = data.info[k]
         sel = mne.pick_types(data.info, meg=True)
-        channel_names = [data.info.ch_names[x] for x in sel]
+        channel_names = [data.info['ch_names'][x] for x in sel]
         subject_name = os.path.basename(subject_dir)
         outpath = outdir + '/' + subject_name
         if not os.path.exists(outpath):
