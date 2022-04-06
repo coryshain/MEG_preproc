@@ -48,7 +48,7 @@ if __name__ == '__main__':
     expt_name = config['expt_name']
     data_name = config.get('data_name', 'data')
     subjects = config['subjects']
-    outdir = config.get('outdir', './rasters_%s' % data_name)
+    outdir = config.get('outdir', './rasters')
     clean_code = config.get('clean_code', 'default_meg')
     resample_to = config.get('resample_to', None)
     event_code_to_name = config.get('event_map', None)
@@ -192,13 +192,12 @@ if __name__ == '__main__':
         for i, channel_name in enumerate(channel_names):
             _raster_data = out[:,i,:]
             savemat(
-                outpath + '/%s_%s.mat' % (subject_name, channel_name),
+                outpath + '/%s_%s_%s.mat' % (subject_name, channel_name, data_name),
                 {
                     'raster_data': _raster_data,
                     'raster_labels': {'attr_cat': raster_labels},
                     'raster_site_info': raster_site_info,
                 }
             )
-            exit()
 
     info('End')
