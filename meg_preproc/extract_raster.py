@@ -1,6 +1,8 @@
 import os
 import time
 import numpy as np
+from numpy.core.records import fromarrays
+from scipy.io import savemat
 import pandas as pd
 import mne
 import yaml
@@ -46,7 +48,6 @@ if __name__ == '__main__':
     expt_name = config['expt_name']
     subjects = config['subjects']
     outdir = config.get('outdir', './rasters')
-    sensor_type = config.get('sensor_type', 'all')
     clean_code = config.get('clean_code', 'default_meg')
     resample_to = config.get('resample_to', None)
     event_code_to_name = config.get('event_map', None)
@@ -152,7 +153,6 @@ if __name__ == '__main__':
                 on='condition',
                 how='inner'
             )
-            print(epoch_events_src)
             _event_times = (epoch_events_src['word_onset_time'] * sfreq).astype(int) + epoch_events_src['time']
             _event_other = epoch_events_src[['something', 'label_id']].values
             epoch_events = np.concatenate(
@@ -176,72 +176,28 @@ if __name__ == '__main__':
             data.resample(resample_to, n_jobs=n_jobs)
 
         out = data.get_data(picks='meg')
-        print(out.shape)
-        print(epoch_events)
-        print(epoch_events.shape)
-        print(data.events)
-        print(data.events.shape)
-        exit()
-
-        _events = data.events
-        _event_ids = _events[:, 2]
-        if word_level_events is None:
-            _event_names = event_mapper(_event_ids)
-            _event_times = _events[:,0] * time_scale
-            _events = pd.DataFrame({
-                'epoch': np.arange(len(_event_names)),
-                'condition': _event_names,
-                'onset_time': _event_times
-            })
-        else:
-            _events = pd.DataFrame({'index': _event_ids})
-            _events = pd.merge(_events, epoch_events_src[['index', 'condition', 'onset_time']], on='index')
-            _events['epoch'] = np.arange(len(_events))
-            del _events['index']
-        _events['subject'] = os.path.basename(subject_dir)
-        events.append(_events)
-
-        _responses = data.to_data_frame(picks='meg')
-        _responses['subject'] = os.path.basename(subject_dir)
-        _responses['time'] = _responses['time']
-        responses.append(_responses)
-
-    if responses:
-        info('Saving response table')
-        responses = pd.concat(responses, axis=0)
-        responses = responses.reset_index(drop=True)
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
-
-        grad_norms = {}
-        if sensor_type[-1] == '+' or sensor_type.lower() == 'gradnorm':
-            # Compute gradnorms
-            grad_norms = {}
-            sensor_locations = sorted(list(set([c[:-1] for c in responses.columns if c.startswith('MEG')])))
-            for c in sensor_locations:
-                g1 = responses[c + '2']
-                g2 = responses[c + '3']
-                n = np.sqrt(g1 ** 2 + g2 ** 2)
-                grad_norms[c.replace('MEG', 'MEGGN')] = n
-        if sensor_type.lower() == 'mag':
-            # Delete gradiometers (sensor names that don't end in 1)
-            for c in responses.columns:
-                if c.startswith('MEG') and not c.endswith('1'):
-                    del responses[c]
-        elif sensor_type.lower() == 'grad':
-            # Delete magentometers (sensor names that end in 1)
-            for c in responses.columns:
-                if c.startswith('MEG') and c.endswith('1'):
-                    del responses[c]
-        if grad_norms:
-            grad_norms = pd.DataFrame(grad_norms)
-            responses = pd.concat([responses, grad_norms], axis=1)
-
-        responses.to_csv(
-            os.path.join(outdir, os.path.basename(expt_name) + '_responses.csv'),
-            index=False
-        )
-    else:
-        info('No output response data.')
+        raster_labels = pd.Series(data.events[:,2]).map(id2label).values
+        raster_site_info = {}
+        info_keys = ['acq_pars', 'bads', 'ch_names', 'chs', 'description', 'dig', 'line_freq', 'meas_date', 'meas_id',
+                     'nchan', 'sfreq']
+        for k in info_keys:
+            raster_site_info[k] = data.info[k]
+        sel = mne.pick_types(data.info, meg=True)
+        channel_names = [data.info.ch_names[x] for x in sel]
+        subject_name = os.path.basename(subject_dir)
+        outpath = outdir + '/' + subject_name
+        if not os.path.exists(outpath):
+            os.makedirs(outpath)
+        for i, channel_name in enumerate(channel_names):
+            _raster_data = out[:,i,:]
+            savemat(
+                outpath + '%s_%s.mat' % (subject_name, channel_name),
+                {
+                    'raster_data': _raster_data,
+                    'raster_labels': fromarrays([raster_labels], names=['attr_cat']),
+                    'raster_site_info': raster_site_info,
+                }
+            )
+            exit()
 
     info('End')
