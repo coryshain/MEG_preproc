@@ -46,8 +46,9 @@ if __name__ == '__main__':
     with open(config_path, 'r') as f:
         config = yaml.load(f, Loader=Loader)
     expt_name = config['expt_name']
+    data_name = config.get('data_name', 'data')
     subjects = config['subjects']
-    outdir = config.get('outdir', './rasters')
+    outdir = config.get('outdir', './rasters_%s' % data_name)
     clean_code = config.get('clean_code', 'default_meg')
     resample_to = config.get('resample_to', None)
     event_code_to_name = config.get('event_map', None)
