@@ -194,7 +194,10 @@ if __name__ == '__main__':
                 outpath + '/%s_%s.mat' % (subject_name, channel_name),
                 {
                     'raster_data': _raster_data,
-                    'raster_labels': fromarrays([raster_labels], names=['attr_cat']),
+                    'raster_labels': fromarrays(
+                        [fromarrays([raster_labels], names=['val'])],
+                        names=['attr_cat']
+                    ),
                     'raster_site_info': raster_site_info,
                 }
             )
