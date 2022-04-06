@@ -177,7 +177,7 @@ if __name__ == '__main__':
             data.resample(resample_to, n_jobs=n_jobs)
 
         out = data.get_data(picks='meg')
-        raster_labels = pd.Series(data.events[:,2]).map(id2label).values[..., None]
+        raster_labels = pd.Series(data.events[:,2]).map(id2label).values
         raster_site_info = {}
         info_keys = ['acq_pars', 'bads', 'ch_names', 'chs', 'description', 'dig', 'line_freq', 'meas_date', 'meas_id',
                      'nchan', 'sfreq']
