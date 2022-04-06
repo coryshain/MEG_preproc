@@ -76,6 +76,8 @@ if __name__ == '__main__':
     label2id = {x: i + 1 for i, x in enumerate(unique_labels)}
     id2label = {i + 1: x for i, x in enumerate(unique_labels)}
     word_level_events['label_id'] = word_level_events[label_col].map(label2id)
+    if 'time' in word_level_events:
+        del word_level_events['time']
 
     reject = dict(mag=8000e-15, grad=8000e-13)  # T, T/m
     flat = dict(mag=1e-15, grad=1e-13)  # T/m
