@@ -176,7 +176,7 @@ if __name__ == '__main__':
             info('Resampling to %s Hz' % resample_to)
             data.resample(resample_to, n_jobs=n_jobs)
 
-        out = data.get_data(picks='meg', units={'grad': 'fT/cm', 'mag': 'fT'})
+        out = data.get_data(picks=['meg', 'stim'], units={'grad': 'fT/cm', 'mag': 'fT'})
         raster_labels = pd.Series(data.events[:,2]).map(id2label).values
         raster_site_info = {}
         info_keys = ['acq_pars', 'bads', 'ch_names', 'chs', 'description', 'dig', 'line_freq', 'meas_date', 'meas_id',
@@ -186,7 +186,7 @@ if __name__ == '__main__':
             if k == 'meas_date':
                 val = str(val)
             raster_site_info[k] = val
-        sel = mne.pick_types(data.info, meg=True)
+        sel = mne.pick_types(data.info, meg=True, stim=True)
         channel_names = [data.info['ch_names'][x] for x in sel]
         subject_name = os.path.basename(subject_dir)
         outpath = outdir + '/' + subject_name + '/' + data_name
