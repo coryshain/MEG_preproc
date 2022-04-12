@@ -176,15 +176,6 @@ if __name__ == '__main__':
             info('Resampling to %s Hz' % resample_to)
             data.resample(resample_to, n_jobs=n_jobs)
 
-        stim = data.get_data(picks='stim')
-        print(stim.shape)
-        for _stim, _target in zip(stim, epoch_events_src.conditionID):
-            codes = np.unique(_stim)
-            print(codes)
-            print(_target)
-            print(_target in codes)
-            input()
-
         out = data.get_data(picks='meg', units={'grad': 'fT/cm', 'mag': 'fT'})
         raster_labels = pd.Series(data.events[:,2]).map(id2label).values
         raster_site_info = {}
