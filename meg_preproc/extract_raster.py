@@ -148,7 +148,7 @@ if __name__ == '__main__':
             epoch_events_src = pd.DataFrame(all_events, columns=['time', 'something', 'conditionID'])
             epoch_events_src['onset_time'] = epoch_events_src['time']
             epoch_events_src = epoch_events_src[epoch_events_src.conditionID.isin(event_code_to_name)]
-            epoch_events_src.condition = event_mapper(epoch_events_src.conditionID)
+            epoch_events_src['condition'] = event_mapper(epoch_events_src.conditionID)
             epoch_events_src = pd.merge(
                 epoch_events_src, word_level_events,
                 on='condition',
