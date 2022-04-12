@@ -177,7 +177,7 @@ if __name__ == '__main__':
             data.resample(resample_to, n_jobs=n_jobs)
 
         stim = data.get_data(picks='stim')
-        for _stim, _target in zip(stim, epoch_events_src.condition):
+        for _stim, _target in zip(stim, epoch_events_src.conditionID):
             codes = np.unique(stim)
             print(codes)
             print(_target)
