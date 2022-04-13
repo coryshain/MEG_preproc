@@ -73,11 +73,6 @@ if __name__ == '__main__':
     word_level_filter = config.get('word_level_filter', {})
     for k in word_level_filter:
         word_level_events = word_level_events[word_level_events[k].isin(word_level_filter[k])]
-    label_col = config.get('label_col', 'condition')
-    unique_labels = word_level_events[label_col].unique()
-    label2id = {x: i + 1 for i, x in enumerate(unique_labels)}
-    id2label = {i + 1: x for i, x in enumerate(unique_labels)}
-    word_level_events['label_id'] = word_level_events[label_col].map(label2id)
     if 'time' in word_level_events:
         del word_level_events['time']
 
@@ -144,6 +139,7 @@ if __name__ == '__main__':
         if word_level_events is None:
             epoch_events = all_events
             event_id = event_name_to_code
+            epoch_events_src = pd.DataFrame(all_events, columns=['time', 'something', 'conditionID'])
         else:
             epoch_events_src = pd.DataFrame(all_events, columns=['time', 'something', 'conditionID'])
             epoch_events_src['onset_time'] = epoch_events_src['time']
@@ -164,7 +160,6 @@ if __name__ == '__main__':
         data = mne.Epochs(
             raw,
             events=epoch_events,
-            event_id=label2id,
             tmin=epoch_tmin,
             tmax=epoch_tmax,
             reject=reject,
@@ -177,7 +172,6 @@ if __name__ == '__main__':
             data.resample(resample_to, n_jobs=n_jobs)
 
         out = data.get_data(picks='meg', units={'grad': 'fT/cm', 'mag': 'fT'})
-        raster_labels = pd.Series(data.events[:,2]).map(id2label).values
         raster_site_info = {}
         info_keys = ['acq_pars', 'bads', 'ch_names', 'chs', 'description', 'dig', 'line_freq', 'meas_date', 'meas_id',
                      'nchan', 'sfreq']
@@ -195,11 +189,12 @@ if __name__ == '__main__':
         for i, channel_name in enumerate(channel_names):
             stderr('Saving %s %s %s...\n' % (subject_name, channel_name, data_name))
             _raster_data = out[:,i,:]
+            assert len(_raster_data) == len(epoch_events_src), 'There must be an equal number of epochs in the data and labels. Saw %d data epochs and %d label epochs.' % (len(_raster_data), len(epoch_events_src))
             savemat(
                 outpath + '/%s_%s_%s.mat' % (subject_name, channel_name, data_name),
                 {
                     'raster_data': _raster_data,
-                    'raster_labels': {'attr_cat': raster_labels},
+                    'raster_labels': {x: epoch_events_src[x] for x in epoch_events_src},
                     'raster_site_info': raster_site_info,
                 }
             )
