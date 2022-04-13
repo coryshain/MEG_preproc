@@ -151,9 +151,8 @@ if __name__ == '__main__':
                 how='inner'
             )
             _event_times = (epoch_events_src['word_onset_time'] * sfreq).astype(int) + epoch_events_src['time']
-            _event_other = epoch_events_src[['something', 'label_id']].values
-            epoch_events = np.concatenate(
-                [_event_times[..., None], _event_other],
+            epoch_events = np.stack(
+                [_event_times, epoch_events_src['something'].values, epoch_events_src.index],
                 axis=1
             ).astype(int)
 
