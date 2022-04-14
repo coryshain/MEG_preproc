@@ -193,7 +193,7 @@ if __name__ == '__main__':
                 outpath + '/%s_%s_%s.mat' % (subject_name, channel_name, data_name),
                 {
                     'raster_data': _raster_data,
-                    'raster_labels': {x: epoch_events_src[x] for x in epoch_events_src},
+                    'raster_labels': {x: epoch_events_src[x].values for x in epoch_events_src},
                     'raster_site_info': raster_site_info,
                 }
             )
