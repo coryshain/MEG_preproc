@@ -56,10 +56,9 @@ if __name__ == '__main__':
         # Load data
         info('Processing subject directory: %s' % subject_dir, marker='*')
         protocol_path = os.path.join(subject_dir, 'protocol.txt')
-        assert os.path.exists(protocol_path), (
-                'No protocol file ("protocol.txt", comma-delimited list of expertiment_name,start_time) found in'
-                ' directory %s.'
-        ) % subject_dir
+        if not os.path.exists(protocol_path):
+            stderr('No protocol file ("protocol.txt", comma-delimited list of expertiment_name,start_time) found in'
+                ' directory %s. Skipping...\n' % subject_dir)
         with open(protocol_path) as f:
             expt_intervals = {}
             lines = list(f.readlines())
@@ -70,9 +69,8 @@ if __name__ == '__main__':
                 else:
                     end = None
                 expt_intervals[name.strip()] = (float(start.strip()), end)
-        assert expt_name in expt_intervals, (
-                'Experiment name %s not found in protocol file, which had experiment names %s.'
-        ) % (expt_name, ', '.join(expt_intervals.keys()))
+        if expt_name not in expt_intervals:
+            stderr('Experiment name %s not found in protocol file for subject %s, which had experiment names %s. Skipping...\n' % (expt_name, subject_dir, ', '.join(expt_intervals.keys())))
         expt_start, expt_end = expt_intervals[expt_name]
         fifs = [x[:-4] for x in os.listdir(subject_dir) if x.endswith('.fif')]
         if not fifs:
@@ -93,10 +91,3 @@ if __name__ == '__main__':
         # Save cleaned data
         suffix = '.fif'
         raw.save(os.path.join(outdir, prefix + '_%s.fif' % expt_name), overwrite=True)
-
-
-
-
-
-
-
