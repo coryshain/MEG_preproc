@@ -93,4 +93,6 @@ if __name__ == '__main__':
 
         # Save cleaned data
         suffix = '.fif'
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
         raw.save(os.path.join(outdir, prefix + '_%s.fif' % expt_name), overwrite=True)
