@@ -73,15 +73,16 @@ if __name__ == '__main__':
     high_freq = float(config['high_freq'])
     if not high_freq:
         high_freq = None
+    if 'notches' in config:
+        notches = config['notches']
+    else:
+        notches = None
     reject = config['reject']
     reject = {x: float(reject[x]) for x in reject}
     flat = config['flat']
     flat = {x: float(flat[x]) for x in flat}
 
     for subject_dir in subject_dirs:
-        print(subject_dir)
-        print(config_name)
-        input()
         with open(os.path.join(subject_dir, config_name + '.yml'), 'w') as f:
             yaml.dump(config, f, Dumper=Dumper)
 
@@ -135,6 +136,9 @@ if __name__ == '__main__':
             info('Bandpass filtering', marker='=')
             raw.load_data()
             raw.filter(l_freq=low_freq, h_freq=high_freq, picks='meg', n_jobs=n_jobs)
+
+        if notches:
+            raw = raw.notch_filter(notches, picks='meg', n_jobs=n_jobs)
 
         # Add the config protocol name to the output path
         suffix = '_' + config_name

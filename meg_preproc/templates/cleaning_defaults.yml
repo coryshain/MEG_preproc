@@ -2,7 +2,9 @@ artifact_n_component: 1
 remove_heartbeats: False
 remove_blinks: True
 low_freq: 0.1
-high_freq: 0.35
+high_freq: 300
+notches:
+  - 60
 reject:
   mag: 8000e-15
   grad: 8000e-13
