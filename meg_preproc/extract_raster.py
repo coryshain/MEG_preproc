@@ -166,7 +166,7 @@ if __name__ == '__main__':
             reject_by_annotation=False,
             preload=True
         )
-        retain_ix = np.array([1 if not x for x in data.drop_log], dtype=bool)
+        retain_ix = np.array([True if not x else False for x in data.drop_log], dtype=bool)
         if resample_to:
             info('Resampling to %s Hz' % resample_to)
             data.resample(resample_to, n_jobs=n_jobs)
