@@ -181,7 +181,9 @@ if __name__ == '__main__':
 
                     _data = data.copy().crop(start, end)
 
-                    print(mne.find_events(_data, stim_channel='STI101', min_duration=0.002, consecutive=True))
+                    ev_debug = mne.find_events(_data, stim_channel='STI101', min_duration=0.002, consecutive=True)
+                    ev_debug = np.stack([ev_debug[0] - _data.first_samp, ev_debug[2]], axis=1)
+                    print(ev_debug)
                     input()
 
                     if resample_to:
