@@ -166,7 +166,7 @@ if __name__ == '__main__':
             reject_by_annotation=False,
             preload=True
         )
-        data.interpolate_bads()
+        retain_ix = np.array([1 if not x for x in data.drop_log], dtype=bool)
         if resample_to:
             info('Resampling to %s Hz' % resample_to)
             data.resample(resample_to, n_jobs=n_jobs)
@@ -189,12 +189,13 @@ if __name__ == '__main__':
         for i, channel_name in enumerate(channel_names):
             stderr('Saving %s %s %s...\n' % (subject_name, channel_name, data_name))
             _raster_data = out[:,i,:]
-            assert len(_raster_data) == len(epoch_events_src), 'There must be an equal number of epochs in the data and labels. Saw %d data epochs and %d label epochs.' % (len(_raster_data), len(epoch_events_src))
+            _epoch_events = epoch_events_src[retain_ix]
+            assert len(_raster_data) == len(_epoch_events), 'There must be an equal number of epochs in the data and labels. Saw %d data epochs and %d label epochs.' % (len(_raster_data), len(epoch_events_src))
             savemat(
                 outpath + '/%s_%s_%s.mat' % (subject_name, channel_name, data_name),
                 {
                     'raster_data': _raster_data,
-                    'raster_labels': {x: epoch_events_src[x].values for x in epoch_events_src},
+                    'raster_labels': {x: _epoch_events[x].values for x in _epoch_events},
                     'raster_site_info': raster_site_info,
                 }
             )
