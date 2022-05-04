@@ -49,7 +49,7 @@ if __name__ == '__main__':
         config = yaml.load(f, Loader=Loader)
     expt_name = config['expt_name']
     subjects = config['subjects']
-    outdir = config.get('outdir', './')
+    outdir = config.get('outdir', './timecourses')
     sensor_type = config.get('sensor_type', 'all')
     clean_code = config.get('clean_code', 'default_meg')
     resample_to = config.get('resample_to', None)
@@ -67,8 +67,8 @@ if __name__ == '__main__':
     epoch_tmax = config.get('epoch_tmax', 0.8)
     end_code = config.get('end_code', None)
     end_key = config.get('end_key', None)
+    assert (end_code is not None) or (end_key is not None), 'end_code or end_key must be provided'
     if end_code is not None or end_key is not None:
-        epoch_data = False
         if end_code is None: # end_key is defined
             if end_key not in event_name_to_code:
                 event_name_to_code[end_key] = int(end_key)
@@ -77,8 +77,6 @@ if __name__ == '__main__':
             if end_code not in event_code_to_name:
                 event_code_to_name[end_code] = str(end_code)
             end_key = event_code_to_name[end_code]
-    else:
-        epoch_data = True
     word_level_file = config.get('word_level_file', None)
     if word_level_file:
         word_level_events = pd.read_csv(word_level_file)
@@ -155,137 +153,63 @@ if __name__ == '__main__':
 
         event_mapper = np.vectorize(lambda x: event_code_to_name.get(x, str(x)))
 
-        if epoch_data:
-            if word_level_events is None:
-                epoch_events = all_events
-                event_id = event_name_to_code
+        data = raw
+        seek_start = True
+        _event_code = None
+        _event_start = None
+        _event_end = None
+        epoch_ix = 0
+        if resample_to:
+            data.load_data()
+        for t, _, code in all_events:
+            if t < 0 or t * time_scale > max_time:
+                continue
+            if seek_start:
+                if code in event_code_to_name:
+                    seek_start = False
+                    _event_code = code
+                    _event_start = t
             else:
-                epoch_events_src = pd.DataFrame(all_events, columns=['time', 'something', 'condition'])
-                epoch_events_src['onset_time'] = epoch_events_src['time']
-                epoch_events_src = epoch_events_src[epoch_events_src.condition.isin(event_code_to_name)]
-                epoch_events_src.condition = event_mapper(epoch_events_src.condition)
-                epoch_events_src = pd.merge(
-                    epoch_events_src, word_level_events.reset_index(),
-                    on='condition',
-                    how='inner'
-                )
-                _event_times = epoch_events_src['word_onset_time'] / time_scale + epoch_events_src['time']
-                _event_other = epoch_events_src[['something', 'index']].values
-                sel = np.logical_and(_event_times > 0, _event_times * time_scale <= max_time)
-                _event_times = _event_times[sel]
-                _event_other = _event_other[sel]
-                epoch_events_src = epoch_events_src[sel]
-                epoch_events = np.concatenate(
-                    [_event_times[..., None], _event_other],
-                    axis=1
-                ).astype(int)
-                del epoch_events_src['time']
-                del epoch_events_src['something']
-                event_id = None
+                if code == end_code:
+                    assert _event_code is not None, "Finished with invalid event code at sample %s." % t
+                    assert _event_start is not None, "Finished with invalid event start time at sample %s." % t
 
-            data = mne.Epochs(
-                raw,
-                events=epoch_events,
-                event_id=event_id,
-                tmin=epoch_tmin,
-                tmax=epoch_tmax,
-                reject=reject,
-                flat=flat,
-                reject_by_annotation=False,
-                preload=True
-            )
-            if resample_to:
-                info('Resampling to %s Hz' % resample_to)
-                data.resample(resample_to, n_jobs=n_jobs)
+                    _event_end = t
 
-            _events = data.events
-            _event_ids = _events[:, 2]
-            if word_level_events is None:
-                _event_names = event_mapper(_event_ids)
-                _event_times = _events[:,0] * time_scale
-                _events = pd.DataFrame({
-                    'epoch': np.arange(len(_event_names)),
-                    'condition': _event_names,
-                    'onset_time': _event_times
-                })
-            else:
-                _events = pd.DataFrame({'index': _event_ids})
-                _events = pd.merge(_events, epoch_events_src[['index', 'condition', 'onset_time']], on='index')
-                _events['epoch'] = np.arange(len(_events))
-                del _events['index']
-            _events['subject'] = os.path.basename(subject_dir)
-            events.append(_events)
+                    start = max(min(_event_start * time_scale + epoch_tmin, data.times.max()), 0)
+                    end = min(_event_end * time_scale + epoch_tmax, data.times.max())
 
-            _responses = data.to_data_frame(picks='meg')
-            _responses['subject'] = os.path.basename(subject_dir)
-            _responses['time'] = _responses['time']
-            responses.append(_responses)
+                    _data = data.copy().crop(start, end)
 
-        else:
-            data = raw
-            epoch_data = []
-            epoch_codes = []
-            epoch_starts = []
-            epoch_ends = []
-            seek_start = True
-            _event_code = None
-            _event_start = None
-            _event_end = None
-            epoch_ix = 0
-            if resample_to:
-                data.load_data()
-            for t, _, code in all_events:
-                if t < 0 or t * time_scale > max_time:
-                    continue
-                if seek_start:
-                    if code in event_code_to_name:
-                        seek_start = False
-                        _event_code = code
-                        _event_start = t
-                else:
-                    if code == end_code:
-                        assert _event_code is not None, "Finished with invalid event code at sample %s." % t
-                        assert _event_start is not None, "Finished with invalid event start time at sample %s." % t
+                    print(mne.find_events(_data, stim_channel='STI101', min_duration=0.002, consecutive=True))
+                    input()
 
-                        _event_end = t
+                    if resample_to:
+                        stderr('Resampling...\n')
+                        _data = _data.resample(resample_to, n_jobs=n_jobs)
 
-                        start = max(min(_event_start * time_scale + epoch_tmin, data.times.max()), 0)
-                        end = min(_event_end * time_scale + epoch_tmax, data.times.max())
+                    _responses = _data.to_data_frame(picks='meg')
+                    _responses['subject'] = os.path.basename(subject_dir)
+                    _responses['epoch'] = epoch_ix
+                    _responses['condition'] = event_code_to_name[_event_code]
+                    _responses = _responses.reset_index()
+                    _responses['time'] = _responses['time'] * time_scale + start
+                    responses.append(_responses)
 
-                        _data = data.copy().crop(start, end)
+                    _events = pd.DataFrame({
+                        'subject': [os.path.basename(subject_dir)],
+                        'epoch': [epoch_ix],
+                        'condition': [event_code_to_name[_event_code]],
+                        'onset_time': [_event_start],
+                        'offset_time': [_event_end]
+                    })
+                    events.append(_events)
 
-                        if resample_to:
-                            stderr('Resampling...\n')
-                            _data = _data.resample(resample_to, n_jobs=n_jobs)
-
-                        _responses = _data.to_data_frame(picks='meg')
-                        _responses['subject'] = os.path.basename(subject_dir)
-                        _responses['epoch'] = epoch_ix
-                        _responses['condition'] = event_code_to_name[_event_code]
-                        _responses = _responses.reset_index()
-                        _responses['time'] = _responses['time'] * time_scale + start
-                        responses.append(_responses)
-
-                        _events = pd.DataFrame({
-                            'subject': [os.path.basename(subject_dir)],
-                            'epoch': [epoch_ix],
-                            'condition': [event_code_to_name[_event_code]],
-                            'onset_time': [_event_start],
-                            'offset_time': [_event_end]
-                        })
-                        events.append(_events)
-
-                        print(start)
-                        print(end)
-                        print(_events[['subject', 'epoch', 'condition', 'onset_time']])
-                        print(_responses[['subject', 'epoch', 'condition', 'time']])
-                        print()
-
-                        seek_start = True
-                        _event_code = None
-                        _event_start = None
-                        _event_end = None
-                        epoch_ix += 1
+                    seek_start = True
+                    _event_code = None
+                    _event_start = None
+                    _event_end = None
+                    epoch_ix += 1
 
     if events:
         info('Saving event table')
@@ -295,11 +219,7 @@ if __name__ == '__main__':
             events['offset_time'] = events['offset_time'] * time_scale
             events['duration'] = events['offset_time'] - events['onset_time']
         if word_level_events is not None:
-            if epoch_data:
-                events['word_pos'] = events.groupby('condition').cumcount() + 1
-                on = ['condition', 'word_pos']
-            else:
-                on = ['condition']
+            on = ['condition']
             events = pd.merge(events, word_level_events, on=on, how='left')
             events.word_onset_time = events.word_onset_time + events.onset_time
             if 'word_offset_time' in events:
