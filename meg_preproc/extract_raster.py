@@ -166,6 +166,7 @@ if __name__ == '__main__':
             reject_by_annotation=False,
             preload=True
         )
+        data.interpolate_bads()
         if resample_to:
             info('Resampling to %s Hz' % resample_to)
             data.resample(resample_to, n_jobs=n_jobs)
